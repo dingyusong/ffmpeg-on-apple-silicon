@@ -76,8 +76,8 @@ curl -Ls -o - https://bitbucket.org/multicoreware/x265_git/downloads/x265_3.3.ta
 # echo "Downloading: glib (2.66.2)"
 # curl -Ls -o - https://download.gnome.org/sources/glib/2.66/glib-2.66.2.tar.xz | tar Jxf - -C $CMPLD/
 # curl -o "$CMPLD/glib-2.66.2/hardcoded-patchs.diff" https://raw.githubusercontent.com/Homebrew/formula-patches/6164294a75541c278f3863b111791376caa3ad26/glib/hardcoded-paths.diff
-echo "Downloading: fribidi (1.0.10)"
-{(curl -Ls -o - https://github.com/fribidi/fribidi/releases/download/v1.0.10/fribidi-1.0.10.tar.xz | tar Jxf - -C $CMPLD/) &};
+echo "Downloading: fribidi (1.0.12)"
+{(curl -Ls -o - https://github.com/fribidi/fribidi/releases/download/v1.0.12/fribidi-1.0.12.tar.xz | tar Jxf - -C $CMPLD/) &};
 echo "Downloading: vid.stab (1.1.0)"
 curl -Ls -o - https://github.com/georgmartius/vid.stab/archive/v1.1.0.tar.gz | tar zxf - -C $CMPLD/
 curl -s -o "$CMPLD/vid.stab-1.1.0/fix_cmake_quoting.patch" https://raw.githubusercontent.com/Homebrew/formula-patches/5bf1a0e0cfe666ee410305cece9c9c755641bfdf/libvidstab/fix_cmake_quoting.patch
@@ -99,8 +99,8 @@ echo "Downloading: gettext (0.21)"
 {(curl -Ls -o - https://ftp.gnu.org/gnu/gettext/gettext-0.21.tar.xz | tar Jxf - -C $CMPLD/) &};
 echo "Downloading: fontconfig (2.13.93)"
 {(curl -Ls -o - https://www.freedesktop.org/software/fontconfig/release/fontconfig-2.13.93.tar.gz | tar zxf - -C $CMPLD/) &};
-echo "Downloading: libass (0.15.0)"
-{(curl -Ls -o - https://github.com/libass/libass/releases/download/0.15.0/libass-0.15.0.tar.gz | tar zxf - -C $CMPLD/) &};
+echo "Downloading: libass (0.17.1)"
+{(curl -Ls -o - https://github.com/libass/libass/releases/download/0.17.1/libass-0.17.1.tar.gz | tar zxf - -C $CMPLD/) &};
 echo "Downloading: yasm (1.3.0)"
 {(curl -Ls -o - http://www.tortall.net/projects/yasm/releases/yasm-1.3.0.tar.gz | tar zxf - -C $CMPLD/) &};
 echo "Downloading: pkg-config (0.29.2)"
@@ -111,8 +111,8 @@ echo "Downloading: libvorbis (1.3.7)"
 {(curl -Ls -o - https://ftp.osuosl.org/pub/xiph/releases/vorbis/libvorbis-1.3.7.tar.gz | tar zxf - -C $CMPLD/) &};
 echo "Downloading: libopus (1.3.1)"
 {(curl -Ls -o - https://archive.mozilla.org/pub/opus/opus-1.3.1.tar.gz | tar zxf - -C $CMPLD/) &};
-echo "Downloading: harfbuzz (2.7.2)"
-{(curl -Ls -o - https://github.com/harfbuzz/harfbuzz/releases/download/2.7.2/harfbuzz-2.7.2.tar.xz | tar Jxf - -C $CMPLD/) &};
+echo "Downloading: harfbuzz (2.9.1)"
+{(curl -Ls -o - https://github.com/harfbuzz/harfbuzz/releases/download/2.9.1/harfbuzz-2.9.1.tar.xz | tar Jxf - -C $CMPLD/) &};
 echo "Downloading: libogg (1.3.4)"
 curl -Ls -o - https://ftp.osuosl.org/pub/xiph/releases/ogg/libogg-1.3.4.tar.gz | tar zxf - -C $CMPLD/
 curl -s -o "$CMPLD/libogg-1.3.4/fix_unsigned_typedefs.patch" "https://github.com/xiph/ogg/commit/c8fca6b4a02d695b1ceea39b330d4406001c03ed.patch?full_index=1"
@@ -123,7 +123,8 @@ function build_fribidi () {
   if [[ ! -e "${SRC}/lib/pkgconfig/fribidi.pc" ]]; then
     echo '♻️ ' Start compiling FRIBIDI
     cd ${CMPLD}
-    cd fribidi-1.0.10
+    cd fribidi-1.0.12
+    ./autogen.sh
     ./configure --prefix=${SRC} --disable-debug --disable-dependency-tracking --disable-silent-rules --disable-shared --enable-static
     make -j ${NUM_PARALLEL_BUILDS}
     make install
@@ -341,7 +342,7 @@ function build_harfbuzz () {
   if [[ ! -e "${SRC}/lib/pkgconfig/harfbuzz.pc" ]]; then
     echo '♻️ ' Start compiling harfbuzz
     cd ${CMPLD}
-    cd harfbuzz-2.7.2
+    cd harfbuzz-2.9.1
     ./configure --prefix=${SRC} --disable-shared --enable-static
     make -j ${NUM_PARALLEL_BUILDS}
     make install
@@ -350,10 +351,12 @@ function build_harfbuzz () {
 
 function build_ass () {
   if [[ ! -e "${SRC}/lib/pkgconfig/libass.pc" ]]; then
+    # export CFLAGS="-I${SRC}/include ${CFLAGS:-}"
+    echo "CFLAGS:$CFLAGS"
     cd ${CMPLD}
-    cd libass-0.15.0
+    cd libass-0.17.1
     autoreconf -i
-    ./configure --prefix=${SRC} --disable-dependency-tracking --disable-shread --enable-static
+    ./configure CFLAGS="-I${SRC}/include/fribidi" --prefix=${SRC} --disable-dependency-tracking --disable-shread --enable-static
     make -j ${NUM_PARALLEL_BUILDS}
     make install
   fi
@@ -438,7 +441,7 @@ function build_ffmpeg () {
               --enable-fontconfig --enable-gpl --enable-libopus --enable-libtheora --enable-libvorbis \
               --enable-libmp3lame --enable-libass --enable-libfreetype --enable-libx264 --enable-libx265 --enable-libvpx \
               --enable-libaom --enable-libvidstab --enable-libsnappy --enable-version3 --pkg-config-flags=--static \
-              --disable-ffplay --enable-postproc --enable-nonfree --enable-runtime-cpudetect
+              --disable-ffplay --enable-postproc --enable-nonfree --enable-runtime-cpudetect --enable-debug
   echo "build start"
   start_time="$(date -u +%s)"
   make -j ${NUM_PARALLEL_BUILDS}
